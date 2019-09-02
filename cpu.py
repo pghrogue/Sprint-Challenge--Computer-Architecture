@@ -12,6 +12,7 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
         self.halt = False
+        self.flags = 0b00000000
 
         # R7 is reserved as the stack pointer (SP)
         self.reg[7] = 255
@@ -51,6 +52,9 @@ class CPU:
         self.dispatchtable[HLT] = self.handle_hlt
         self.dispatchtable[PUSH] = self.handle_push
         self.dispatchtable[POP] = self.handle_pop
+        self.dispatchtable[CALL] = self.handle_call
+        self.dispatchtable[RET] = self.handle_ret
+        self.dispatchtable[JMP] = self.handle_jmp
 
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
@@ -62,32 +66,79 @@ class CPU:
         """ALU operations."""
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
+        print(f"DEBUG:: operand_a: {operand_a} operand_b: {operand_b}")
+        print(f"DEBUG:: reg.operand_a: {self.reg[operand_a]} reg.operand_b: {self.reg[operand_b]}")
         self.alutable = {}
-        self.alutable[MUL] = self.reg[operand_a] = self.reg[operand_a] * self.reg[operand_b]
+        self.alutable[ADD] = self.reg[operand_a] + self.reg[operand_b]
+        self.alutable[MUL] = self.reg[operand_a] * self.reg[operand_b]
+        
 
-        # if IR == "ADD":
-        #     self.reg[reg_a] += self.reg[reg_b]
-        # #elif op == "SUB": etc
-        try:
-            self.alutable[IR]
-        except:
-            raise Exception("Unsupported ALU operation")
+        if IR == "CMP":
+            # 00000LGE
+            if self.reg[operand_a] == self.reg[operand_b]:
+                self.flags = 0b00000001
+            elif self.reg[operand_a] < self.reg[operand_b]:
+                self.flags = 0b00000100
+            else:
+                self.flags = 0b00000010
+        else:
+            self.handle_alu(operand_a, self.alutable[IR])
+
+    def handle_alu(self, operand_a, val):
+        print(f"DEBUG:: handle_alu op_a {operand_a} val {val}")
+        self.reg[operand_a] = val
 
     def handle_ldi(self, operand_a, operand_b):
+        print(f"DEBUG:: self.reg[{operand_a}] = {operand_b}")
         self.reg[operand_a] = operand_b
 
     def handle_prn(self, operand_a, operand_b):
+        print(f"DEBUG:: self.reg[{operand_a}] = {self.reg[operand_a]}")
         print(self.reg[operand_a])
 
     def handle_hlt(self, operand_a, operand_b):
         self.halt = True
 
     def handle_push(self, operand_a, operand_b):
-        self.reg[7] = (pointer - 1) % 255
+        self.reg[7] = (self.reg[7] - 1) % 255
         pointer = self.reg[7]
         
+        reg_addr = operand_a
+        value = self.reg[reg_addr]
 
-        self.ram[pointer] = operand_a
+        self.ram[pointer] = value
+
+    def handle_pop(self, operand_a, operand_b):
+        pointer = self.reg[7]
+
+        value = self.ram[pointer]
+        reg_addr = operand_a
+        self.reg[reg_addr] = value
+
+        self.reg[7] = (pointer + 1) % 255
+
+    def handle_call(self, operand_a, operand_b):
+        addr = self.reg[operand_a]
+
+        next_addr = self.pc + 2
+        self.reg[7] = (self.reg[7] - 1) % 255
+        pointer = self.reg[7]
+        self.ram[pointer] = next_addr
+
+        self.pc = addr
+
+    def handle_ret(self, operand_a, operand_b):
+        pointer = self.reg[7]
+        return_addr = self.ram[pointer]
+
+        self.reg[7] = (pointer + 1) % 255
+
+        self.pc = return_addr
+
+    def handle_jmp(self, operand_a, operand_b):
+        jump_addr = self.reg[operand_a]
+
+        self.pc = jump_addr
 
     def trace(self):
         """
