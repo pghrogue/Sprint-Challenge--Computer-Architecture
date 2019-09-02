@@ -55,6 +55,8 @@ class CPU:
         self.dispatchtable[CALL] = self.handle_call
         self.dispatchtable[RET] = self.handle_ret
         self.dispatchtable[JMP] = self.handle_jmp
+        self.dispatchtable[JEQ] = self.handle_jeq
+        self.dispatchtable[JNE] = self.handle_jne
 
         operand_a = self.ram_read(self.pc + 1)
         operand_b = self.ram_read(self.pc + 2)
@@ -73,7 +75,8 @@ class CPU:
         self.alutable[MUL] = self.reg[operand_a] * self.reg[operand_b]
         
 
-        if IR == "CMP":
+        if IR == CMP:
+
             # 00000LGE
             if self.reg[operand_a] == self.reg[operand_b]:
                 self.flags = 0b00000001
@@ -81,7 +84,10 @@ class CPU:
                 self.flags = 0b00000100
             else:
                 self.flags = 0b00000010
+            print(f"DEBUG:: flags = {format(self.flags, '08b')}")
+            
         else:
+            print("DEBUG: alu else")
             self.handle_alu(operand_a, self.alutable[IR])
 
     def handle_alu(self, operand_a, val):
@@ -95,6 +101,7 @@ class CPU:
     def handle_prn(self, operand_a, operand_b):
         print(f"DEBUG:: self.reg[{operand_a}] = {self.reg[operand_a]}")
         print(self.reg[operand_a])
+        # exit(0)
 
     def handle_hlt(self, operand_a, operand_b):
         self.halt = True
@@ -137,8 +144,28 @@ class CPU:
 
     def handle_jmp(self, operand_a, operand_b):
         jump_addr = self.reg[operand_a]
-
+        print(f"Jumping to {bin(jump_addr)}")
         self.pc = jump_addr
+
+    def handle_jeq(self, operand_a, operand_b):
+        # If equal flag is set (true), jump to the address stored in the given register.
+        if self.flags == 0b00000001:
+            print("DEBUG: Is equal")
+            self.handle_jmp(operand_a, operand_b)
+        else:
+            print("DEBUG: Is not equal")
+            self.pc += 2
+        
+
+    def handle_jne(self, operand_a, operand_b):
+        # If E flag is clear (false, 0), jump to the address stored in the given register.
+        flag_str = format(self.flags, '08b')
+        if flag_str[7:8] == 0:
+            print("DEBUG: JNE is true")
+            self.handle_jmp(operand_a, operand_b)
+        else:
+            print("DEBUG: JNE is false")
+            self.pc += 2
 
     def trace(self):
         """
