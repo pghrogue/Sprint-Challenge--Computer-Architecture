@@ -73,6 +73,14 @@ class CPU:
         self.alutable = {}
         self.alutable[ADD] = self.reg[operand_a] + self.reg[operand_b]
         self.alutable[MUL] = self.reg[operand_a] * self.reg[operand_b]
+        self.alutable[AND] = self.reg[operand_a] & self.reg[operand_b]
+        self.alutable[OR] = self.reg[operand_a] | self.reg[operand_b]
+        self.alutable[XOR] = self.reg[operand_a] ^ self.reg[operand_b]
+        self.alutable[NOT] = ~self.reg[operand_a]
+        self.alutable[SHL] = self.reg[operand_a] << self.reg[operand_b]
+        self.alutable[SHR] = self.reg[operand_a] >> self.reg[operand_b]
+        self.alutable[MOD] = self.reg[operand_a] % self.reg[operand_b]
+
         
 
         if IR == CMP:
